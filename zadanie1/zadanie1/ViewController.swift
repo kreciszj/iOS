@@ -64,6 +64,31 @@ class ViewController: UIViewController {
         operation = ""
     }
     
+    @IBAction func unaryOperationPressed(_ sender: UIButton) {
+        guard let operationType = sender.currentTitle else { return }
+        
+        switch operationType {
+        case "%":
+            currentNumber = currentNumber / 100
+        case "+/-", "+/−":
+            currentNumber = -currentNumber
+        case "log":
+            if currentNumber > 0 {
+                currentNumber = log10(currentNumber)
+            } else {
+                displayLabel.text = "Error"
+                currentNumber = 0
+                previousNumber = 0
+                operation = ""
+                return
+            }
+        default:
+            break
+        }
+        
+        displayLabel.text = formatResult(currentNumber)
+    }
+    
     func performCalculation() {
         var result: Double = 0
         
@@ -84,6 +109,8 @@ class ViewController: UIViewController {
                 operation = ""
                 return
             }
+        case "xʸ", "^":
+            result = pow(previousNumber, currentNumber)
         default:
             result = currentNumber
         }
