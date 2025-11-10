@@ -61,6 +61,21 @@ class ViewController: UIViewController {
         switch operation {
         case "+":
             result = previousNumber + currentNumber
+        case "−":
+            result = previousNumber - currentNumber
+        case "×":
+            result = previousNumber * currentNumber
+        case "÷":
+            // Check for division by zero
+            if currentNumber != 0 {
+                result = previousNumber / currentNumber
+            } else {
+                displayLabel.text = "Error"
+                currentNumber = 0
+                previousNumber = 0
+                operation = ""
+                return
+            }
         default:
             result = currentNumber
         }
