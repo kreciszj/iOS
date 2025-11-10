@@ -49,24 +49,32 @@ class ViewController: UIViewController {
     }
     
     @IBAction func operationPressed(_ sender: UIButton) {
-        previousNumber = currentNumber
+        if operation != "" && !performingOperation {
+            performCalculation()
+        } else {
+            previousNumber = currentNumber
+        }
+        
         operation = sender.currentTitle ?? ""
         performingOperation = true
     }
     
     @IBAction func equalsPressed(_ sender: UIButton) {
-
+        performCalculation()
+        operation = ""
+    }
+    
+    func performCalculation() {
         var result: Double = 0
         
         switch operation {
         case "+":
             result = previousNumber + currentNumber
-        case "−":
+        case "−", "-":
             result = previousNumber - currentNumber
-        case "×":
+        case "×", "*":
             result = previousNumber * currentNumber
-        case "÷":
-            // Check for division by zero
+        case "÷", "/":
             if currentNumber != 0 {
                 result = previousNumber / currentNumber
             } else {
@@ -82,7 +90,7 @@ class ViewController: UIViewController {
         
         displayLabel.text = formatResult(result)
         currentNumber = result
-        operation = ""
+        previousNumber = result
     }
     
     func formatResult(_ number: Double) -> String {
