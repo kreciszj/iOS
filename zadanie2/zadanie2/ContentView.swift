@@ -20,6 +20,22 @@ enum TaskStatus: String, CaseIterable {
         case .done: return "checkmark.circle.fill"
         }
     }
+
+    var label: String {
+        switch self {
+        case .todo: return "TODO"
+        case .doing: return "DOING"
+        case .done: return "DONE"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .todo: return .secondary
+        case .doing: return .orange
+        case .done: return .green
+        }
+    }
 }
 
 struct TaskItem: Identifiable {
@@ -64,7 +80,6 @@ struct ContentView: View {
                         toggleStatus(at: index)
                     } label: {
                         HStack(spacing: 12) {
-                            // Ikonka "zadania" (z 3.5)
                             Image(systemName: task.imageName)
                                 .font(.system(size: 22))
                                 .frame(width: 34, height: 34)
@@ -81,11 +96,20 @@ struct ContentView: View {
                             }
 
                             Spacer()
+                            VStack(alignment: .trailing, spacing: 6) {
+                                Text(task.status.label)
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(task.status.color.opacity(0.15))
+                                    .clipShape(Capsule())
+                                    .foregroundStyle(task.status.color)
 
-                            // Ikonka statusu (żeby było widać, że zmiana działa)
-                            Image(systemName: task.status.iconName)
-                                .font(.system(size: 18))
-                                .foregroundStyle(.secondary)
+                                Image(systemName: task.status.iconName)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(task.status.color)
+                            }
                         }
                         .padding(.vertical, 6)
                     }
@@ -93,7 +117,7 @@ struct ContentView: View {
                 }
                 .onDelete(perform: deleteTasks)
             }
-            .navigationTitle("Lista zadań")
+            .navigationTitle("Lista zadan")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -120,7 +144,7 @@ struct ContentView: View {
 
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Nowe zadanie startuje ze statusem TODO.")
+                Text("Nowe zadanie startuje jako TODO")
             }
         }
     }
