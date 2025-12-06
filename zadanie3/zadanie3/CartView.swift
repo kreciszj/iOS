@@ -10,7 +10,9 @@ struct CartView: View {
     }
 
     private var totalPrice: Double {
-        cartProducts.reduce(0) { $0 + $1.price }
+        cartProducts.reduce(0) { partial, p in
+            partial + (Double(cartStore.quantity(for: p)) * p.price)
+        }
     }
 
     var body: some View {
@@ -20,7 +22,7 @@ struct CartView: View {
                     VStack(spacing: 8) {
                         Text("Koszyk jest pusty")
                             .font(.headline)
-                        Text("Dodaj produkt")
+                        Text("Dodaj produkty z zakładki Produkty.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -29,49 +31,93 @@ struct CartView: View {
                 } else {
                     Section("Produkty w koszyku") {
                         ForEach(cartProducts) { p in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(p.name ?? "Bez nazwy")
-                                        .font(.headline)
-                                    Text(p.category?.name ?? "Brak kategorii")
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                            cartRow(for: p)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        cartStore.removeAll(of: p)
+                                    } label: {
+                                        Label("Usuń", systemImage: "trash")
+                                    }
                                 }
-                                Spacer()
-                                Text(String(format: "%.2f zł", p.price))
-                                    .monospacedDigit()
-                            }
-                            .padding(.vertical, 4)
                         }
-                        .onDelete(perform: delete)
                     }
 
                     Section("Podsumowanie") {
-                        Text("Suma: \(String(format: "%.2f", totalPrice)) zł")
-                            .font(.headline)
+                        HStack {
+                            Text("Sztuki")
+                            Spacer()
+                            Text("\(cartStore.totalItemsCount)")
+                                .monospacedDigit()
+                        }
+
+                        HStack {
+                            Text("Suma")
+                            Spacer()
+                            Text("\(String(format: "%.2f", totalPrice)) zł")
+                                .monospacedDigit()
+                                .font(.headline)
+                        }
 
                         Button(role: .destructive) {
                             cartStore.clear()
                         } label: {
-                            Text("Wyczyść")
+                            Text("Wyczyść koszyk")
                         }
                     }
                 }
             }
             .navigationTitle("Koszyk")
-            .toolbar {
-                if !cartProducts.isEmpty {
-                    EditButton()
-                }
-            }
         }
     }
 
-    private func delete(at offsets: IndexSet) {
-        let items = cartProducts
-        for index in offsets {
-            cartStore.remove(items[index])
+    @ViewBuilder
+    private func cartRow(for product: Product) -> some View {
+        let q = cartStore.quantity(for: product)
+        let linePrice = Double(q) * product.price
+
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product.name ?? "Bez nazwy")
+                    .font(.headline)
+                Text(product.category?.name ?? "Brak kategorii")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text("Cena: \(String(format: "%.2f", product.price)) zł")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 8) {
+                HStack(spacing: 10) {
+                    Button {
+                        cartStore.removeOne(product)
+                    } label: {
+                        Text("−")
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Text("\(q)")
+                        .frame(minWidth: 24)
+                        .monospacedDigit()
+
+                    Button {
+                        cartStore.add(product)
+                    } label: {
+                        Text("+")
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Text("\(String(format: "%.2f", linePrice)) zł")
+                    .monospacedDigit()
+                    .font(.subheadline)
+            }
         }
+        .padding(.vertical, 4)
     }
 }
 

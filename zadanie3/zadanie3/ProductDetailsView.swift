@@ -31,21 +31,41 @@ struct ProductDetailsView: View {
                 Text(product.category?.name ?? "Brak kategorii")
             }
 
-            Section {
-                if cartStore.contains(product) {
+            Section("Koszyk") {
+                let q = cartStore.quantity(for: product)
+
+                HStack {
+                    Text("Ilość w koszyku")
+                    Spacer()
+                    Text("\(q)")
+                        .monospacedDigit()
+                }
+
+                HStack(spacing: 12) {
                     Button {
+                        cartStore.removeOne(product)
                     } label: {
-                        Text("W koszyku")
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        Text("−")
+                            .frame(width: 44, height: 44)
                     }
-                    .disabled(true)
-                } else {
+                    .buttonStyle(.bordered)
+                    .disabled(q == 0)
+
                     Button {
                         cartStore.add(product)
                     } label: {
                         Text("Dodaj do koszyka")
-                            .frame(maxWidth: .infinity, alignment: .center)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
+                    .buttonStyle(.borderedProminent)
+
+                    Button {
+                        cartStore.add(product)
+                    } label: {
+                        Text("+")
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
         }

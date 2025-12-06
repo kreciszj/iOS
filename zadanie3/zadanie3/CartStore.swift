@@ -3,28 +3,45 @@ import CoreData
 import Combine
 
 final class CartStore: ObservableObject {
-    @Published private(set) var itemIDs: Set<NSManagedObjectID> = []
+    @Published private(set) var quantities: [NSManagedObjectID: Int] = [:]
 
-    var count: Int { itemIDs.count }
+    var totalItemsCount: Int {
+        quantities.values.reduce(0, +)
+    }
 
-    func contains(_ product: Product) -> Bool {
-        itemIDs.contains(product.objectID)
+    var uniqueItemsCount: Int {
+        quantities.count
+    }
+
+    func quantity(for product: Product) -> Int {
+        quantities[product.objectID] ?? 0
     }
 
     func add(_ product: Product) {
-        itemIDs.insert(product.objectID)
+        let id = product.objectID
+        quantities[id, default: 0] += 1
     }
 
-    func remove(_ product: Product) {
-        itemIDs.remove(product.objectID)
+    func removeOne(_ product: Product) {
+        let id = product.objectID
+        guard let current = quantities[id] else { return }
+        if current <= 1 {
+            quantities.removeValue(forKey: id)
+        } else {
+            quantities[id] = current - 1
+        }
+    }
+
+    func removeAll(of product: Product) {
+        quantities.removeValue(forKey: product.objectID)
     }
 
     func clear() {
-        itemIDs.removeAll()
+        quantities.removeAll()
     }
 
     func products(in context: NSManagedObjectContext) -> [Product] {
-        itemIDs
+        quantities.keys
             .compactMap { id in
                 (try? context.existingObject(with: id)) as? Product
             }

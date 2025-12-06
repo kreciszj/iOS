@@ -19,9 +19,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private var cartTab: some View {
-        if cartStore.count > 0 {
+        if cartStore.totalItemsCount > 0 {
             CartView()
-                .badge(cartStore.count)
+                .badge(cartStore.totalItemsCount)
         } else {
             CartView()
         }
