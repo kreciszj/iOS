@@ -3,7 +3,11 @@ import CoreData
 
 @main
 struct zadanie3App: App {
-    let persistenceController = PersistenceController.shared
+    private let persistenceController = PersistenceController.shared
+
+    init() {
+        persistenceController.loadFixturesIfNeeded()
+    }
 
     var body: some Scene {
         WindowGroup {

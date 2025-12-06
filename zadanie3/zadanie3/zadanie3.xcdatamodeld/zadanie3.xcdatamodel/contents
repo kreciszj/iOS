@@ -8,7 +8,7 @@
     <entity name="Product" representedClassName="Product" syncable="YES" codeGenerationType="class">
         <attribute name="details" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="name" attributeType="String"/>
         <attribute name="price" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Category" inverseName="products" inverseEntity="Category"/>
     </entity>
