@@ -3,11 +3,12 @@ import CoreData
 
 struct ProductDetailsView: View {
     let product: Product
+    @EnvironmentObject private var cartStore: CartStore
 
     var body: some View {
         Form {
             Section("Nazwa") {
-                Text(product.name ?? "Brak nazwy")
+                Text(product.name ?? "Bez nazwy")
                     .font(.headline)
             }
 
@@ -29,6 +30,24 @@ struct ProductDetailsView: View {
             Section("Kategoria") {
                 Text(product.category?.name ?? "Brak kategorii")
             }
+
+            Section {
+                if cartStore.contains(product) {
+                    Button {
+                    } label: {
+                        Text("W koszyku")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .disabled(true)
+                } else {
+                    Button {
+                        cartStore.add(product)
+                    } label: {
+                        Text("Dodaj do koszyka")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+            }
         }
         .navigationTitle("Szczegóły")
         .navigationBarTitleDisplayMode(.inline)
@@ -44,5 +63,6 @@ struct ProductDetailsView: View {
 
     return NavigationStack {
         ProductDetailsView(product: first ?? Product(context: ctx))
+            .environmentObject(CartStore())
     }
 }

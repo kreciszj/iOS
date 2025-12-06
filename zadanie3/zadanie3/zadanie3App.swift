@@ -4,6 +4,7 @@ import CoreData
 @main
 struct zadanie3App: App {
     private let persistenceController = PersistenceController.shared
+    @StateObject private var cartStore = CartStore()
 
     init() {
         persistenceController.loadFixturesIfNeeded()
@@ -13,6 +14,7 @@ struct zadanie3App: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(cartStore)
         }
     }
 }
