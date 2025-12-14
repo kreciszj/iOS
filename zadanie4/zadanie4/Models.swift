@@ -31,3 +31,9 @@ struct OrderItem: Identifiable, Codable, Equatable {
     let quantity: Int
     let unitPrice: Double
 }
+
+struct NewProduct: Codable, Equatable {
+    let name: String
+    let price: Double
+    let categoryId: Int
+}

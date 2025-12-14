@@ -21,27 +21,45 @@ final class APIClient {
     private var baseURL: URL? { URL(string: baseURLString) }
 
     func fetchCategories() async throws -> [Category] {
-        try await request(path: "/categories", as: [Category].self)
+        try await request(path: "/categories", method: "GET", body: nil, as: [Category].self)
     }
 
     func fetchProducts() async throws -> [Product] {
-        try await request(path: "/products", as: [Product].self)
+        try await request(path: "/products", method: "GET", body: nil, as: [Product].self)
     }
 
     func fetchOrders() async throws -> [Order] {
-        try await request(path: "/orders", as: [Order].self)
+        try await request(path: "/orders", method: "GET", body: nil, as: [Order].self)
     }
 
-    private func request<T: Decodable>(path: String, as type: T.Type) async throws -> T {
+    func createProduct(_ newProduct: NewProduct) async throws -> Product {
+        let body = try JSONEncoder().encode(newProduct)
+        return try await request(path: "/products", method: "POST", body: body, as: Product.self, expected: [200, 201])
+    }
+
+    private func request<T: Decodable>(
+        path: String,
+        method: String,
+        body: Data?,
+        as type: T.Type,
+        expected: [Int] = Array(200...299)
+    ) async throws -> T {
         guard let baseURL else { throw APIError.badURL }
         let url = baseURL.appendingPathComponent(path)
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.httpBody = body
+        if body != nil {
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: req)
 
         guard let http = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
-        guard (200...299).contains(http.statusCode) else {
+        guard expected.contains(http.statusCode) else {
             throw APIError.httpStatus(http.statusCode)
         }
 

@@ -42,6 +42,11 @@ ORDERS = [
     }
 ]
 
+def next_product_id():
+    if not PRODUCTS:
+        return 1
+    return max(p["id"] for p in PRODUCTS) + 1
+
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")
@@ -50,6 +55,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _read_json(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length).decode("utf-8") if length > 0 else ""
+        if not raw:
+            return None
+        return json.loads(raw)
 
     def do_GET(self):
         if self.path == "/" or self.path == "/health":
@@ -65,6 +77,40 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json(ORDERS)
 
         return self._send_json({"error": "Not found"}, status=404)
+
+    def do_POST(self):
+        if self.path != "/products":
+            return self._send_json({"error": "Not found"}, status=404)
+
+        try:
+            data = self._read_json()
+            if not data:
+                return self._send_json({"error": "empty body"}, status=400)
+
+            name = data.get("name", "").strip()
+            price = data.get("price", None)
+            category_id = data.get("categoryId", None)
+
+            if not name:
+                return self._send_json({"error": "name required"}, status=400)
+
+            if price is None:
+                return self._send_json({"error": "price required"}, status=400)
+
+            if category_id is None:
+                return self._send_json({"error": "categoryId required"}, status=400)
+
+            new_product = {
+                "id": next_product_id(),
+                "name": name,
+                "price": float(price),
+                "categoryId": int(category_id)
+            }
+
+            PRODUCTS.append(new_product)
+            return self._send_json(new_product, status=201)
+        except Exception as e:
+            return self._send_json({"error": "bad request", "details": str(e)}, status=400)
 
     def log_message(self, format, *args):
         return
