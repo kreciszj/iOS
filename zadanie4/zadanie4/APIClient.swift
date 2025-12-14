@@ -18,7 +18,6 @@ enum APIError: LocalizedError {
 
 final class APIClient {
     private let baseURLString = "http://localhost:3000"
-
     private var baseURL: URL? { URL(string: baseURLString) }
 
     func fetchCategories() async throws -> [Category] {
@@ -27,6 +26,10 @@ final class APIClient {
 
     func fetchProducts() async throws -> [Product] {
         try await request(path: "/products", as: [Product].self)
+    }
+
+    func fetchOrders() async throws -> [Order] {
+        try await request(path: "/orders", as: [Order].self)
     }
 
     private func request<T: Decodable>(path: String, as type: T.Type) async throws -> T {
