@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var store = Store()
+    @EnvironmentObject private var store: Store
 
     var body: some View {
         NavigationStack {
@@ -16,17 +16,19 @@ struct ContentView: View {
                 }
 
                 if let error = store.errorMessage {
-                    Section("Błąd") {
-                        Text(error).foregroundStyle(.red)
-                        Text("Sprawdz czy backend dziala")
+                    Section("Info") {
+                        Text(error)
+                            .foregroundStyle(.red)
+                        Text("Stale mode")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 Section("Kategorie (\(store.categories.count))") {
-                    if store.categories.isEmpty && !store.isLoading && store.errorMessage == nil {
-                        Text("Brak danych.").foregroundStyle(.secondary)
+                    if store.categories.isEmpty && !store.isLoading {
+                        Text("Brak danych")
+                            .foregroundStyle(.secondary)
                     } else {
                         ForEach(store.categories) { c in
                             Text(c.name)
@@ -35,12 +37,14 @@ struct ContentView: View {
                 }
 
                 Section("Produkty (\(store.products.count))") {
-                    if store.products.isEmpty && !store.isLoading && store.errorMessage == nil {
-                        Text("Brak danych.").foregroundStyle(.secondary)
+                    if store.products.isEmpty && !store.isLoading {
+                        Text("Brak danych")
+                            .foregroundStyle(.secondary)
                     } else {
                         ForEach(store.products) { p in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(p.name).font(.headline)
+                                Text(p.name)
+                                    .font(.headline)
                                 Text("Cena: \(p.price, specifier: "%.2f") | Kategoria: \(store.categoryName(for: p))")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
