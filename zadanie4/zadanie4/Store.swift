@@ -53,10 +53,6 @@ final class Store: ObservableObject {
         categories.first(where: { $0.id == product.categoryId })?.name ?? "Brak"
     }
 
-    func productName(for productId: Int) -> String {
-        products.first(where: { $0.id == productId })?.name ?? "Produkt \(productId)"
-    }
-
     private func loadFromCoreData() {
         do {
             let catReq = NSFetchRequest<NSManagedObject>(entityName: "CategoryEntity")
@@ -68,14 +64,14 @@ final class Store: ObservableObject {
             let orderObjects = try context.fetch(orderReq)
 
             let loadedCategories: [Category] = catObjects.compactMap { obj in
-                guard let name = obj.value(forKey: "name") as? String else { return nil }
                 let id = obj.value(forKey: "id") as? Int64 ?? 0
+                let name = obj.value(forKey: "name") as? String ?? ""
                 return Category(id: Int(id), name: name)
             }
 
             let loadedProducts: [Product] = prodObjects.compactMap { obj in
-                guard let name = obj.value(forKey: "name") as? String else { return nil }
                 let id = obj.value(forKey: "id") as? Int64 ?? 0
+                let name = obj.value(forKey: "name") as? String ?? ""
                 let price = obj.value(forKey: "price") as? Double ?? 0
                 let categoryId = obj.value(forKey: "categoryId") as? Int64 ?? 0
                 return Product(id: Int(id), name: name, price: price, categoryId: Int(categoryId))
