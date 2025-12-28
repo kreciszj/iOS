@@ -9,6 +9,9 @@ struct ContentView: View {
     @State private var token: String? = nil
     @State private var isLoading = false
     @State private var errorText: String? = nil
+    @State private var infoText: String? = nil
+
+    @State private var mode = 0
 
     var body: some View {
         NavigationView {
@@ -32,6 +35,7 @@ struct ContentView: View {
                         self.token = nil
                         self.password = ""
                         self.errorText = nil
+                        self.infoText = nil
                     }
                     .buttonStyle(.borderedProminent)
 
@@ -41,9 +45,16 @@ struct ContentView: View {
                 .navigationTitle("Zadanie5")
             } else {
                 VStack(spacing: 12) {
-                    Text("Logowanie")
+                    Picker("", selection: $mode) {
+                        Text("Logowanie").tag(0)
+                        Text("Rejestracja").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text(mode == 0 ? "Logowanie" : "Rejestracja")
                         .font(.title2)
                         .bold()
+                        .padding(.top, 6)
 
                     TextField("Email", text: $email)
                         .textInputAutocapitalization(.never)
@@ -54,6 +65,13 @@ struct ContentView: View {
                     SecureField("Haslo", text: $password)
                         .textFieldStyle(.roundedBorder)
 
+                    if let infoText {
+                        Text(infoText)
+                            .foregroundColor(.green)
+                            .font(.footnote)
+                            .multilineTextAlignment(.center)
+                    }
+
                     if let errorText {
                         Text(errorText)
                             .foregroundColor(.red)
@@ -62,12 +80,18 @@ struct ContentView: View {
                     }
 
                     Button {
-                        Task { await login() }
+                        Task {
+                            if mode == 0 {
+                                await login()
+                            } else {
+                                await register()
+                            }
+                        }
                     } label: {
                         if isLoading {
                             ProgressView()
                         } else {
-                            Text("Zaloguj")
+                            Text(mode == 0 ? "Zaloguj" : "Zarejestruj")
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -77,16 +101,52 @@ struct ContentView: View {
                     Spacer()
                 }
                 .padding()
-                .navigationTitle("Zadanie 5")
+                .navigationTitle("Zadanie5")
             }
+        }
+    }
+
+    @MainActor
+    private func register() async {
+        errorText = nil
+        infoText = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        guard let url = URL(string: "\(baseURL)/register") else {
+            errorText = "Zły adres serwera."
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = AuthRequest(email: email, password: password)
+
+        do {
+            request.httpBody = try JSONEncoder().encode(body)
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                let msg = String(data: data, encoding: .utf8) ?? ""
+                errorText = "Błąd rejestracji (\(http.statusCode)). \(msg)"
+                return
+            }
+
+            infoText = "Konto utworzone. Możesz się zalogować."
+            password = ""
+            mode = 0
+        } catch {
+            errorText = "Nie udało się zarejestrować: \(error.localizedDescription)"
         }
     }
 
     @MainActor
     private func login() async {
         errorText = nil
+        infoText = nil
         isLoading = true
-
         defer { isLoading = false }
 
         guard let url = URL(string: "\(baseURL)/login") else {
@@ -98,11 +158,10 @@ struct ContentView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body = LoginRequest(email: email, password: password)
+        let body = AuthRequest(email: email, password: password)
 
         do {
             request.httpBody = try JSONEncoder().encode(body)
-
             let (data, response) = try await URLSession.shared.data(for: request)
 
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {
@@ -119,7 +178,7 @@ struct ContentView: View {
     }
 }
 
-struct LoginRequest: Codable {
+struct AuthRequest: Codable {
     let email: String
     let password: String
 }
