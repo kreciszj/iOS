@@ -4,6 +4,9 @@ import GoogleSignInSwift
 
 struct ContentView: View {
     private let baseURL = "http://127.0.0.1:3000"
+    private let githubClientID = "Ov23liWDaNn2RaidNXN9"
+
+    @Environment(\.openURL) private var openURL
 
     @State private var email = ""
     @State private var password = ""
@@ -14,6 +17,12 @@ struct ContentView: View {
     @State private var infoText: String? = nil
 
     @State private var mode = 0
+
+    @State private var ghUserCode: String? = nil
+    @State private var ghVerificationURL: URL? = nil
+    @State private var ghDeviceCode: String? = nil
+    @State private var ghIntervalSeconds: Int = 5
+    @State private var ghPollingTask: Task<Void, Never>? = nil
 
     var body: some View {
         NavigationView {
@@ -35,6 +44,7 @@ struct ContentView: View {
 
                     Button("Wyloguj") {
                         GIDSignIn.sharedInstance.signOut()
+                        stopGitHubFlow()
                         self.token = nil
                         self.password = ""
                         self.errorText = nil
@@ -105,6 +115,41 @@ struct ContentView: View {
                         GoogleSignInButton(action: googleLogin)
                             .padding(.top, 6)
                             .disabled(isLoading)
+
+                        Button {
+                            Task { await startGitHubDeviceFlow() }
+                        } label: {
+                            Text("Zaloguj przez GitHub")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .disabled(isLoading || githubClientID.hasPrefix("TU_WKLEJ"))
+                        .buttonStyle(.bordered)
+
+                        if let code = ghUserCode, let url = ghVerificationURL {
+                            VStack(spacing: 8) {
+                                Text("GitHub Device Code:")
+                                    .font(.headline)
+
+                                Text(code)
+                                    .font(.title)
+                                    .bold()
+                                    .padding(.vertical, 6)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(12)
+
+                                Button("Otwórz stronę GitHub") {
+                                    openURL(url)
+                                }
+                                .buttonStyle(.borderedProminent)
+
+                                Button("Anuluj") {
+                                    stopGitHubFlow()
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                            .padding(.top, 8)
+                        }
                     }
 
                     Spacer()
@@ -153,6 +198,145 @@ struct ContentView: View {
                 self.infoText = "Google OK"
             }
         }
+    }
+
+    @MainActor
+    private func startGitHubDeviceFlow() async {
+        errorText = nil
+        infoText = nil
+        isLoading = true
+        stopGitHubFlow()
+
+        do {
+            let resp = try await githubRequestDeviceCode()
+            ghUserCode = resp.user_code
+            ghDeviceCode = resp.device_code
+            ghIntervalSeconds = max(resp.interval, 5)
+            ghVerificationURL = URL(string: resp.verification_uri)
+
+            isLoading = false
+            infoText = "Otwórz GitHub i wpisz kod"
+
+            ghPollingTask = Task {
+                await pollGitHubForToken()
+            }
+        } catch {
+            isLoading = false
+            errorText = "GitHub: \(error.localizedDescription)"
+        }
+    }
+
+    @MainActor
+    private func pollGitHubForToken() async {
+        guard let deviceCode = ghDeviceCode else { return }
+
+        while !Task.isCancelled {
+            do {
+                let res = try await githubPollAccessToken(deviceCode: deviceCode)
+
+                if let accessToken = res.access_token, !accessToken.isEmpty {
+                    self.token = accessToken
+                    self.infoText = "GitHub OK"
+                    stopGitHubFlow(keepUI: false)
+                    return
+                }
+
+                if let err = res.error {
+                    if err == "authorization_pending" {
+                        try await Task.sleep(nanoseconds: UInt64(ghIntervalSeconds) * 1_000_000_000)
+                        continue
+                    }
+
+                    if err == "slow_down" {
+                        ghIntervalSeconds += 5
+                        try await Task.sleep(nanoseconds: UInt64(ghIntervalSeconds) * 1_000_000_000)
+                        continue
+                    }
+
+                    self.errorText = "GitHub: \(err)"
+                    stopGitHubFlow(keepUI: true)
+                    return
+                }
+
+                try await Task.sleep(nanoseconds: UInt64(ghIntervalSeconds) * 1_000_000_000)
+            } catch {
+                self.errorText = "GitHub: \(error.localizedDescription)"
+                stopGitHubFlow(keepUI: true)
+                return
+            }
+        }
+    }
+
+    private func stopGitHubFlow(keepUI: Bool = false) {
+        ghPollingTask?.cancel()
+        ghPollingTask = nil
+
+        if !keepUI {
+            ghUserCode = nil
+            ghVerificationURL = nil
+            ghDeviceCode = nil
+            ghIntervalSeconds = 5
+        }
+    }
+
+    private func formBody(_ dict: [String: String]) -> Data {
+        let s = dict.map { key, value in
+            let k = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
+            let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+            return "\(k)=\(v)"
+        }.joined(separator: "&")
+        return Data(s.utf8)
+    }
+
+    private func githubRequestDeviceCode() async throws -> GitHubDeviceCodeResponse {
+        guard let url = URL(string: "https://github.com/login/device/code") else {
+            throw NSError(domain: "BadURL", code: 0)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        request.httpBody = formBody([
+            "client_id": githubClientID,
+            "scope": "read:user user:email"
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            let msg = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: "GitHubDeviceCode", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+
+        return try JSONDecoder().decode(GitHubDeviceCodeResponse.self, from: data)
+    }
+
+    private func githubPollAccessToken(deviceCode: String) async throws -> GitHubAccessTokenResponse {
+        guard let url = URL(string: "https://github.com/login/oauth/access_token") else {
+            throw NSError(domain: "BadURL", code: 0)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        request.httpBody = formBody([
+            "client_id": githubClientID,
+            "device_code": deviceCode,
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            let msg = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: "GitHubAccessToken", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+
+        return try JSONDecoder().decode(GitHubAccessTokenResponse.self, from: data)
     }
 
     @MainActor
@@ -234,4 +418,21 @@ struct AuthRequest: Codable {
 
 struct LoginResponse: Codable {
     let token: String
+}
+
+struct GitHubDeviceCodeResponse: Codable {
+    let device_code: String
+    let user_code: String
+    let verification_uri: String
+    let expires_in: Int
+    let interval: Int
+}
+
+struct GitHubAccessTokenResponse: Codable {
+    let access_token: String?
+    let token_type: String?
+    let scope: String?
+    let error: String?
+    let error_description: String?
+    let interval: Int?
 }
