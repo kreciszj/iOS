@@ -1,4 +1,6 @@
 import SwiftUI
+import GoogleSignIn
+import GoogleSignInSwift
 
 struct ContentView: View {
     private let baseURL = "http://127.0.0.1:3000"
@@ -32,6 +34,7 @@ struct ContentView: View {
                         .cornerRadius(12)
 
                     Button("Wyloguj") {
+                        GIDSignIn.sharedInstance.signOut()
                         self.token = nil
                         self.password = ""
                         self.errorText = nil
@@ -98,10 +101,56 @@ struct ContentView: View {
                     .disabled(isLoading || email.isEmpty || password.isEmpty)
                     .buttonStyle(.borderedProminent)
 
+                    if mode == 0 {
+                        GoogleSignInButton(action: googleLogin)
+                            .padding(.top, 6)
+                            .disabled(isLoading)
+                    }
+
                     Spacer()
                 }
                 .padding()
                 .navigationTitle("Zadanie5")
+            }
+        }
+    }
+
+    private func googleLogin() {
+        errorText = nil
+        infoText = nil
+        isLoading = true
+
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            errorText = "Brak aktywnego okna"
+            isLoading = false
+            return
+        }
+
+        guard let rootViewController = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            errorText = "Brak rootViewController"
+            isLoading = false
+            return
+        }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController) { signInResult, error in
+            DispatchQueue.main.async {
+                self.isLoading = false
+
+                if let error {
+                    self.errorText = "Google: \(error.localizedDescription)"
+                    return
+                }
+
+                guard let result = signInResult else {
+                    self.errorText = "Google: brak wyniku logowania"
+                    return
+                }
+
+                let idToken = result.user.idToken?.tokenString
+                let accessToken = result.user.accessToken.tokenString
+
+                self.token = (idToken?.isEmpty == false) ? idToken : accessToken
+                self.infoText = "Google OK"
             }
         }
     }
