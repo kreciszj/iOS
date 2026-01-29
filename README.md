@@ -51,3 +51,42 @@
 ✅ **4.5** - wyświetlanie produktów oraz ich kategorii na dwóch osobnych listach - [commit](https://github.com/kreciszj/iOS/commit/68d84b1a5e62e409ee9f487d2dc97c48138933de)
 
 ✅ **5.0** - dodawanie produktów z poziomu aplikacji mobilnej - [commit](https://github.com/kreciszj/iOS/commit/9a2a07c4c6d6e03a5d6d47a6662e1fffb7ad7391)
+
+
+## Zadanie 5 - OAuth
+
+✅ **3.0** - logowanie przez aplikację serwerową - [commit](https://github.com/kreciszj/iOS/commit/796e40aeb5d2f6d6cf616ca3d079cdce6c812c66)
+
+✅ **3.5** - rejestracja przez aplikację serwerową - [commit](https://github.com/kreciszj/iOS/commit/c1e40e8f462180405696a71ab07b007e93cc8874)
+
+✅ **4.0** - logowanie via Google OAuth2 - [commit](https://github.com/kreciszj/iOS/commit/3c23c906c3e15bc7cedebadce11ce4f417757ab4)
+
+✅ **4.5** - logowanie via Facebook OAuth2 lub GitHub OAuth2 - [commit](https://github.com/kreciszj/iOS/commit/2d488e90c2cc95370d4dbeaab60ef09ecf2df2b7)
+
+❌ **5.0** - zapisywanie danych logowania OAuth2 po stronie serwera
+
+
+## Zadanie 6 - Płatności
+
+✅ **3.0** - formularz płatności oraz mockowanie przez aplikację serwerową - [commit](https://github.com/kreciszj/iOS/commit/d8006a1bb389fb5a5fd6836a7c694d04d23d6af1)
+
+✅ **3.5** - model płatności lokalnie - [commit](https://github.com/kreciszj/iOS/commit/a8e692ca7f57b56bd1bb115d7ddea339c48fe457)
+
+✅ **4.0** - lista zakupionych (opłaconych) produktów wraz z modelem danych - [commit](https://github.com/kreciszj/iOS/commit/a8e692ca7f57b56bd1bb115d7ddea339c48fe457)
+
+❌ **4.5** - wdrożenie systemu płatności Stripe
+
+❌ **5.0** - dodanie skanowania kart płatniczych
+
+
+## Zadanie 7 - Testy
+
+✅ **3.0** - stworzyć 30 asercji testów funkcjonalnych - [commit](https://github.com/kreciszj/iOS/commit/c6337c4f8e7cff0e708d6b15904850f7e5dd2a7d)
+
+❌ **3.5** - stworzyć dodatkowo 20 asercji testów jednostkowych
+
+❌ **4.0** - stworzyć mocki modelu produktów
+
+❌ **4.5** - stworzyć mocki modelu kategorii
+
+❌ **5.0** - dodać fixturki
