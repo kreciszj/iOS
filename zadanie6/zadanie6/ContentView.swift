@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var paymentStore: PaymentStore
+
     @State private var fullName = ""
     @State private var cardNumber = ""
     @State private var expiry = ""
@@ -51,6 +53,13 @@ struct ContentView: View {
                     }
                     .disabled(isLoading)
                 }
+
+                Section {
+                    NavigationLink("Lista zakupionych") {
+                        PurchasesView()
+                            .environmentObject(paymentStore)
+                    }
+                }
             }
             .navigationTitle("Płatność")
             .alert(alertTitle, isPresented: $showAlert) {
@@ -88,6 +97,16 @@ struct ContentView: View {
                     isLoading = false
                     if response.status == "success" {
                         show(title: "Sukces", message: "Płatność zaakceptowana.\nTransaction ID: \(response.transaction_id)")
+
+                        let digits = cardNumber.filter { $0.isNumber }
+                        let last4 = String(digits.suffix(4))
+                        let payment = Payment(fullName: fullName, cardLast4: last4, amount: amount, transactionID: response.transaction_id)
+                        paymentStore.add(payment)
+
+                        fullName = ""
+                        cardNumber = ""
+                        expiry = ""
+                        cvc = ""
                     } else {
                         show(title: "Odrzucono", message: "Płatność odrzucona.\nPowód: \(response.message)")
                     }
@@ -145,7 +164,6 @@ struct PayResponse: Codable {
     let transaction_id: String
     let message: String
 }
-
 
 #Preview {
     ContentView()
